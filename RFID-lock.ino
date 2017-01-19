@@ -77,7 +77,7 @@
   to use common cathode led or just seperate leds, simply comment out #define COMMON_ANODE,
 */
 
-#define COMMON_ANODE
+//#define COMMON_ANODE
 
 #ifdef COMMON_ANODE
 #define LED_ON LOW
@@ -143,11 +143,19 @@ void setup() {
     delay(15000);                        // Give user enough time to cancel operation
     if (digitalRead(wipeB) == LOW) {    // If button still be pressed, wipe EEPROM
       Serial.println(F("Starting Wiping EEPROM"));
-      for (uint8_t x = 0; x < EEPROM.length(); x = x + 1) {    //Loop end of EEPROM address
+  Serial.print("length = ");
+  Serial.println(EEPROM.length());
+  Serial.println("removing, x = 0");
+          EEPROM.write(0, 0); 
+      for (unsigned int x = 1; x < EEPROM.length() && x > 0; x = x + 1) {    //Loop end of EEPROM address
         if (EEPROM.read(x) == 0) {              //If EEPROM address 0
+  Serial.print("skipping, x = ");
+  Serial.println(x);
           // do nothing, already clear, go to the next address in order to save time and reduce writes to EEPROM
         }
         else {
+  Serial.print("removing, x = ");
+  Serial.println(x);
           EEPROM.write(x, 0);       // if not write 0 to clear, it takes 3.3mS
         }
       }
@@ -204,10 +212,12 @@ void setup() {
 
 ///////////////////////////////////////// Main Loop ///////////////////////////////////
 void loop () {
+  Serial.println("loop");
   do {
     successRead = getID();  // sets successRead to 1 when we get read from reader otherwise 0
     // When device is in use if wipe button pressed for 10 seconds initialize Master Card wiping  
     if (digitalRead(wipeB) == LOW) { // Check if button is pressed
+  Serial.println("wipe pressed");
       // Visualize normal operation is iterrupted by pressing wipe button Red is like more Warning to user
       digitalWrite(redLed, LED_ON);  // Make sure led is off
       digitalWrite(greenLed, LED_OFF);  // Make sure led is off
@@ -230,8 +240,11 @@ void loop () {
     }
   }
   while (!successRead);   //the program will not go further while you are not getting a successful read
+  Serial.println("success");
   if (programMode) {
+  Serial.println("propgram");
     if ( isMaster(readCard) ) { //When in program mode check First If master card scanned again to exit program mode
+  Serial.println("master");
       Serial.println(F("Master Card Scanned"));
       Serial.println(F("Exiting Program Mode"));
       Serial.println(F("-----------------------------"));
@@ -239,13 +252,16 @@ void loop () {
       return;
     }
     else {
+  Serial.println("slave");
       if ( findID(readCard) ) { // If scanned card is known delete it
+  Serial.println("known");
         Serial.println(F("I know this PICC, removing..."));
         deleteID(readCard);
         Serial.println("-----------------------------");
         Serial.println(F("Scan a PICC to ADD or REMOVE to EEPROM"));
       }
       else {                    // If scanned card is not known add it
+  Serial.println("unknown");
         Serial.println(F("I do not know this PICC, adding..."));
         writeID(readCard);
         Serial.println(F("-----------------------------"));
@@ -254,7 +270,9 @@ void loop () {
     }
   }
   else {
+  Serial.println("working");
     if ( isMaster(readCard)) {    // If scanned card's ID matches Master Card's ID - enter program mode
+  Serial.println("master");
       programMode = true;
       Serial.println(F("Hello Master - Entered Program Mode"));
       uint8_t count = EEPROM.read(0);   // Read the first Byte of EEPROM that
@@ -267,11 +285,14 @@ void loop () {
       Serial.println(F("-----------------------------"));
     }
     else {
+  Serial.println("slave");
       if ( findID(readCard) ) { // If not, see if the card is in the EEPROM
+  Serial.println("granted");
         Serial.println(F("Welcome, You shall pass"));
         granted(300);         // Open the door lock for 300 ms
       }
       else {      // If not, show that the ID was not valid
+  Serial.println("denied");
         Serial.println(F("You shall not pass"));
         denied();
       }
@@ -371,8 +392,8 @@ void normalModeOn () {
 
 //////////////////////////////////////// Read an ID from EEPROM //////////////////////////////
 void readID( uint8_t number ) {
-  uint8_t start = (number * 4 ) + 2;    // Figure out starting position
-  for ( uint8_t i = 0; i < 4; i++ ) {     // Loop 4 times to get the 4 Bytes
+  unsigned int start = (number * 4 ) + 2;    // Figure out starting position
+  for ( unsigned int i = 0; i < 4; i++ ) {     // Loop 4 times to get the 4 Bytes
     storedCard[i] = EEPROM.read(start + i);   // Assign values read from EEPROM to array
   }
 }
@@ -456,16 +477,23 @@ uint8_t findIDSLOT( byte find[] ) {
 
 ///////////////////////////////////////// Find ID From EEPROM   ///////////////////////////////////
 boolean findID( byte find[] ) {
+  Serial.println("find 1");
   uint8_t count = EEPROM.read(0);     // Read the first Byte of EEPROM that
-  for ( uint8_t i = 1; i <= count; i++ ) {    // Loop once for each EEPROM entry
+  Serial.print("find 2, count = ");
+  Serial.println(count);
+  for (uint8_t i = 1; i <= count && i > 0; i++ ) {    // Loop once for each EEPROM entry
+//  Serial.print("find 3, i = ");
+//  Serial.println(i);
     readID(i);          // Read an ID from EEPROM, it is stored in storedCard[4]
     if ( checkTwo( find, storedCard ) ) {   // Check to see if the storedCard read from EEPROM
+  Serial.println("find 5");
       return true;
       break;  // Stop looking we found it
     }
     else {    // If not, return false
     }
   }
+  Serial.println("find 6");
   return false;
 }
 
@@ -534,3 +562,4 @@ boolean isMaster( byte test[] ) {
   else
     return false;
 }
+
