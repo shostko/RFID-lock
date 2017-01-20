@@ -92,6 +92,8 @@
 
 #define LED 4
 
+#define BUTTON_OPEN 6
+
 #define RELAY 5     // Set Relay Pin
 #define wipeB 3     // Button pin for WipeMode
 
@@ -116,6 +118,7 @@ void setup() {
   //Arduino Pin Configuration
   pinMode(LED, OUTPUT);
   pinMode(wipeB, INPUT_PULLUP);   // Enable pin's pull up resistor
+  pinMode(BUTTON_OPEN, INPUT_PULLUP);   // Enable pin's pull up resistor
   pinMode(RELAY, OUTPUT);
   //Be careful how RELAY circuit behave on while resetting or power-cycling your Arduino
   digitalWrite(RELAY, RELAY_OFF);  // Make sure door is locked
@@ -205,8 +208,14 @@ void loop () {
   Serial.println("loop");
   do {
     successRead = getID();  // sets successRead to 1 when we get read from reader otherwise 0
-    // When device is in use if wipe button pressed for 10 seconds initialize Master Card wiping  
-    if (digitalRead(wipeB) == LOW) { // Check if button is pressed
+    if (digitalRead(BUTTON_OPEN) == LOW) {
+      delay(50); 
+      if (digitalRead(BUTTON_OPEN) == LOW) {
+        granted(300);         // Open the door lock for 300 ms
+      }
+    } 
+    // When device is in use if wipe button pressed for 10 seconds initialize Master Card wiping 
+    else if (digitalRead(wipeB) == LOW) { // Check if button is pressed
 	  Serial.println("wipe pressed");
       // Visualize normal operation is iterrupted by pressing wipe button Red is like more Warning to user
       digitalWrite(LED, LED_ON);  // Make sure led is on
@@ -224,11 +233,9 @@ void loop () {
       digitalWrite(LED, LED_OFF); 
         while (1);
       }
-    }
-    if (programMode) {
+    } else if (programMode) {
       masterMode();              // Program Mode cycles through Red Green Blue waiting to read a new card
-    }
-    else {
+    } else {
       normalMode();     // Normal mode, blue Power LED is on, all others are off
     }
   }
